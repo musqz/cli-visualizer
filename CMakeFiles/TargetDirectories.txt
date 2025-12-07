@@ -1,7 +1,0 @@
-/run/media/vogel/BORG/MABOX_FLEX/Documents/cli-visualizer/CMakeFiles/vis.dir
-/run/media/vogel/BORG/MABOX_FLEX/Documents/cli-visualizer/CMakeFiles/edit_cache.dir
-/run/media/vogel/BORG/MABOX_FLEX/Documents/cli-visualizer/CMakeFiles/rebuild_cache.dir
-/run/media/vogel/BORG/MABOX_FLEX/Documents/cli-visualizer/CMakeFiles/list_install_components.dir
-/run/media/vogel/BORG/MABOX_FLEX/Documents/cli-visualizer/CMakeFiles/install.dir
-/run/media/vogel/BORG/MABOX_FLEX/Documents/cli-visualizer/CMakeFiles/install/local.dir
-/run/media/vogel/BORG/MABOX_FLEX/Documents/cli-visualizer/CMakeFiles/install/strip.dir

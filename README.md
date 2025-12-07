@@ -148,6 +148,12 @@ Older version of Ubuntu need to compile with the newer g++ compiler.
 	export CXX=g++-4.9
 	./install.sh
 
+### Arch Linux
+
+The Arch Linux install is much simpler since an AUR package exist for cli-visualizer.
+
+	yaourt -S cli-visualizer
+
 You will have to copy config and colors manually.
 
 ## Setup
