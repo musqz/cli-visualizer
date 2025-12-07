@@ -49,10 +49,6 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-![travis-ci](https://travis-ci.org/dpayne/cli-visualizer.svg?branch=master)
-
-![Coverity Scan Build Status](https://scan.coverity.com/projects/7519/badge.svg)
-
 # cli-visualizer
 
 Command line visualizer. Supports mpd, with experimental support for alsa and pulseaudio.
@@ -148,13 +144,9 @@ Older version of Ubuntu need to compile with the newer g++ compiler.
 	export CXX=g++-4.9
 	./install.sh
 
-### Arch Linux
+### Arch Linux DEPRICATED
 
-The Arch Linux install is much simpler since an AUR package exist for cli-visualizer.
-
-	yaourt -S cli-visualizer
-
-You will have to copy config and colors manually.
+The Arch Linux install is no longer available. Archive and github deleted.
 
 ## Setup
 
