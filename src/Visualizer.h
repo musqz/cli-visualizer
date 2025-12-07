@@ -8,12 +8,13 @@
 #ifndef _VIS_VISUALIZER_H
 #define _VIS_VISUALIZER_H
 
-#include <memory>
 #include "Domain/Settings.h"
 #include "Domain/VisTypes.h"
 #include "Source/AudioSource.h"
 #include "Transformer/GenericTransformer.h"
 #include "Writer/NcursesWriter.h"
+#include <locale>
+#include <memory>
 
 namespace vis
 {
@@ -21,7 +22,15 @@ namespace vis
 class Visualizer
 {
   public:
-    explicit Visualizer(const vis::Settings *const settings);
+    explicit Visualizer(const std::string &config_path, const std::locale &loc);
+
+    Visualizer(const Visualizer &v) = delete;
+
+    Visualizer(const Visualizer &&v) = delete;
+
+    Visualizer &operator=(const Visualizer &v) = delete;
+
+    Visualizer &operator=(const Visualizer &&v) = delete;
 
     virtual ~Visualizer();
 
@@ -37,44 +46,49 @@ class Visualizer
         m_shutdown = true;
     }
 
-    void process_user_input();
+    void reload_config();
 
   private:
-    size_t m_current_audio_source_index;
+    std::shared_ptr<vis::Settings> m_settings;
+
+    size_t m_current_color_scheme_index;
 
     size_t m_current_transformer_index;
 
     std::unique_ptr<vis::NcursesWriter> m_writer;
 
+    std::unique_ptr<AudioSource> m_audio_source;
+
     bool m_shutdown;
 
-    const vis::Settings *const m_settings;
+    bool m_signal_handlers_setup;
 
-    std::vector<std::unique_ptr<vis::AudioSource>> m_audio_sources;
+    std::locale m_loc;
 
     std::vector<std::unique_ptr<vis::GenericTransformer>> m_transformers;
 
-    void add_audio_source(const std::string &audio_source);
-
     pcm_stereo_sample *m_pcm_buffer;
-
-    inline AudioSource *get_current_audio_source()
-    {
-        return m_audio_sources[m_current_audio_source_index].get();
-    }
 
     inline GenericTransformer *get_current_transformer()
     {
         return m_transformers[m_current_transformer_index].get();
     }
 
-    void setup_audio_sources();
+    void process_user_input();
+
+    void rotate_color_scheme();
+
+    void setup_audio_source();
 
     void setup_transformers();
 
-    void rotate_transformer(const int64_t rotation_interval,
+    void setup_signal_handlers();
+
+    void rotate_transformer(int64_t rotation_interval,
                             int64_t *last_rotation_timestamp);
+
+    void allocate_buffer();
 };
-}
+} // namespace vis
 
 #endif

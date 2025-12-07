@@ -1,7 +1,8 @@
-#include <ncurses.h>
-#include <iostream>
-#include <gtest/gtest.h>
+#include <Utils/NcursesUtils.h>
 #include <Utils/Utils.h>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <ncurses.h>
 
 TEST(UtilsTest, LowercaseAllLowerCase)
 {
@@ -40,14 +41,6 @@ TEST(UtilsTest, LowercaseEmptyString)
     std::string expected{""};
 
     EXPECT_EQ(expected, actual) << "lowercase must work with an empty string";
-}
-
-TEST(UtilsTest, GetHomeDirectory)
-{
-    auto actual = vis::Utils::get_home_directory();
-
-    EXPECT_FALSE(actual.empty())
-        << "get home directory should not return an empty string";
 }
 
 TEST(UtilsTest, ToBoolEmptyString)
@@ -101,23 +94,23 @@ TEST(UtilsTest, ToBoolFaLseString)
 
 TEST(UtilsTest, GetStrFromStrStrUnorderedMap)
 {
-    std::unordered_map<std::string, std::string> m{
-        {"a", "a"}, {"b", "b"}, {"c", "c"}};
+    std::unordered_map<std::string, std::wstring> m{
+        {"a", L"a"}, {"b", L"b"}, {"c", L"c"}};
 
-    EXPECT_EQ(std::string{"a"},
-              vis::Utils::get(m, std::string{"a"}, std::string{""}));
-    EXPECT_EQ(std::string{"b"},
-              vis::Utils::get(m, std::string{"b"}, std::string{""}));
-    EXPECT_EQ(std::string{""},
-              vis::Utils::get(m, std::string{"z"}, std::string{""}));
-    EXPECT_EQ(std::string{"d"},
-              vis::Utils::get(m, std::string{"z"}, std::string{"d"}));
+    EXPECT_EQ(std::wstring{L"a"},
+              vis::Utils::get(m, std::string{"a"}, std::wstring{L""}));
+    EXPECT_EQ(std::wstring{L"b"},
+              vis::Utils::get(m, std::string{"b"}, std::wstring{L""}));
+    EXPECT_EQ(std::wstring{L""},
+              vis::Utils::get(m, std::string{"z"}, std::wstring{L""}));
+    EXPECT_EQ(std::wstring{L"d"},
+              vis::Utils::get(m, std::string{"z"}, std::wstring{L"d"}));
 }
 
 TEST(UtilsTest, GetBoolFromStrStrUnorderedMap)
 {
-    std::unordered_map<std::string, std::string> m{
-        {"a", "true"}, {"b", "false"}, {"c", "c"}};
+    std::unordered_map<std::string, std::wstring> m{
+        {"a", L"true"}, {"b", L"false"}, {"c", L"c"}};
 
     EXPECT_EQ(true, vis::Utils::get(m, std::string{"a"}, true));
     EXPECT_EQ(false, vis::Utils::get(m, std::string{"b"}, true));
@@ -127,8 +120,8 @@ TEST(UtilsTest, GetBoolFromStrStrUnorderedMap)
 
 TEST(UtilsTest, GetUintFromStrStrUnorderedMap)
 {
-    std::unordered_map<std::string, std::string> m{
-        {"a", "1337"}, {"b", "42"}, {"c", "c"}};
+    std::unordered_map<std::string, std::wstring> m{
+        {"a", L"1337"}, {"b", L"42"}, {"c", L"c"}};
 
     EXPECT_EQ(1337,
               vis::Utils::get(m, std::string{"a"}, static_cast<uint32_t>(1)));
@@ -145,7 +138,7 @@ TEST(UtilsTest, SplitFirstEmptyString)
     std::pair<std::string, std::string> p{"hello", "world"};
     std::string s{""};
 
-    vis::Utils::split_first(s, '=', p);
+    vis::Utils::split_first(s, '=', &p);
 
     EXPECT_EQ("", p.first);
     EXPECT_EQ("", p.second);
@@ -156,7 +149,7 @@ TEST(UtilsTest, SplitFirstSingleDelimString)
     std::pair<std::string, std::string> p{"hello", "world"};
     std::string s{"this=isatest"};
 
-    vis::Utils::split_first(s, '=', p);
+    vis::Utils::split_first(s, '=', &p);
 
     EXPECT_EQ("this", p.first);
     EXPECT_EQ("isatest", p.second);
@@ -167,7 +160,7 @@ TEST(UtilsTest, SplitFirstMultiDelimString)
     std::pair<std::string, std::string> p{"hello", "world"};
     std::string s{"this=isatest=with=more=than=one=delimiter"};
 
-    vis::Utils::split_first(s, '=', p);
+    vis::Utils::split_first(s, '=', &p);
 
     EXPECT_EQ("this", p.first);
     EXPECT_EQ("isatest=with=more=than=one=delimiter", p.second);
@@ -178,7 +171,7 @@ TEST(UtilsTest, SplitEmptyString)
     std::vector<std::string> v{"hello", "world"};
     std::string s{""};
 
-    vis::Utils::split(s, '=', v);
+    vis::Utils::split(s, '=', &v);
 
     EXPECT_TRUE(v.empty());
 }
@@ -188,7 +181,7 @@ TEST(UtilsTest, SplitSingleDelimString)
     std::vector<std::string> v{"hello", "world"};
     std::string s{"this=isatest"};
 
-    vis::Utils::split(s, '=', v);
+    vis::Utils::split(s, '=', &v);
 
     EXPECT_EQ(2, v.size());
     EXPECT_EQ("this", v[0]);
@@ -200,7 +193,7 @@ TEST(UtilsTest, SplitMultiDelimString)
     std::vector<std::string> v{"hello", "world"};
     std::string s{"this=isatest=with=more=than=one=delimiter"};
 
-    vis::Utils::split(s, '=', v);
+    vis::Utils::split(s, '=', &v);
 
     EXPECT_EQ(7, v.size());
     EXPECT_EQ("this", v[0]);
@@ -232,22 +225,32 @@ TEST(UtilsTest, ToIntZero)
     EXPECT_EQ(0, vis::Utils::to_int("0"));
 }
 
-TEST(UtilsTest, ToUIntEmptyString)
+TEST(UtilsTest, IsNumericZero)
 {
-    EXPECT_EQ(0, vis::Utils::to_uint(""));
+    EXPECT_TRUE(vis::Utils::is_numeric("0"));
 }
 
-TEST(UtilsTest, ToUIntMaxInt)
+TEST(UtilsTest, IsNumericOne)
 {
-    EXPECT_EQ(4294967295, vis::Utils::to_uint("4294967295"));
+    EXPECT_TRUE(vis::Utils::is_numeric("1"));
 }
 
-TEST(UtilsTest, ToUInt)
+TEST(UtilsTest, IsNumericNegative)
 {
-    EXPECT_EQ(1337, vis::Utils::to_uint("1337"));
+    EXPECT_TRUE(vis::Utils::is_numeric("-1"));
 }
 
-TEST(UtilsTest, ToUIntZero)
+TEST(UtilsTest, IsNumericMaxInt)
 {
-    EXPECT_EQ(0, vis::Utils::to_uint("0"));
+    EXPECT_TRUE(vis::Utils::is_numeric("2147483647"));
+}
+
+TEST(UtilsTest, IsNumericLetter)
+{
+    EXPECT_FALSE(vis::Utils::is_numeric("A"));
+}
+
+TEST(UtilsTest, IsNumericWords)
+{
+    EXPECT_FALSE(vis::Utils::is_numeric("hello world"));
 }

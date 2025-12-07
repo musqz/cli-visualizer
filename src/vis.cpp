@@ -5,17 +5,18 @@
  *     Author: dpayne
  */
 
+#include <csignal>
+#include <cstring>
 #include <iostream>
 #include <memory>
-#include <csignal>
-#include <string.h>
 
 #include "Domain/Settings.h"
 #include "Domain/VisConstants.h"
+#include "Domain/VisException.h"
 #include "Utils/ConfigurationUtils.h"
-#include "Utils/Utils.h"
 #include "Utils/Logger.h"
 #include "Utils/NcursesUtils.h"
+#include "Utils/Utils.h"
 #include "Visualizer.h"
 
 #ifdef NCURSESW
@@ -24,31 +25,15 @@
 #include <ncurses.h>
 #endif
 
-static vis::Visualizer *g_vis = nullptr;
 static std::string g_program_help =
     "Usage: vis -c FILE\n"
     "vis -- CLI visualizer.\n"
     "\n"
-    "  -c FILE     Config file path, defaults to ~/.vis/config\n"
+    "  -c FILE     Config file path, defaults to ~/.config/vis/config\n"
     "  -h          Give this help list\n";
-
-static inline void shutdown(int sig)
-{
-    std::cerr << "Received signal: " << sig << std::endl;
-
-    if (g_vis != nullptr)
-    {
-        g_vis->shutdown();
-    }
-}
 
 int main(int argc, char *argv[])
 {
-    // Catch interrupt and termination signals so the program can be cleanly
-    // shutdown.
-    std::signal(SIGINT, shutdown);
-    std::signal(SIGTERM, shutdown);
-
     std::string config_path;
 
     // Read the settings file command line argument if available
@@ -72,27 +57,53 @@ int main(int argc, char *argv[])
 
     vis::Logger::initialize(VisConstants::k_default_log_path);
 
-    vis::Settings settings;
+    std::locale loc; // initialized to locale::classic()
+    std::ios::sync_with_stdio(false);
 
-    // use default config path if none given
-    if (config_path.empty())
+    try
     {
-        vis::ConfigurationUtils::load_settings(settings);
+        loc = std::locale{VisConstants::k_default_locale.c_str()};
+        std::wcout.imbue(loc); // Use it for output
     }
-    else
+    catch (const std::runtime_error &)
     {
-        vis::ConfigurationUtils::load_settings(settings, config_path);
+        loc = std::locale{loc, "", std::locale::ctype};
     }
 
-    std::unique_ptr<vis::Visualizer> visualizer =
-        std::make_unique<vis::Visualizer>(&settings);
-    g_vis = visualizer.get();
+    std::string error_msg;
+    try
+    {
+        // use default config path if none given
+        if (config_path.empty())
+        {
+            config_path = VisConstants::k_default_config_path;
+        }
 
-    visualizer->run();
+        std::unique_ptr<vis::Visualizer> visualizer =
+            std::make_unique<vis::Visualizer>(config_path, loc);
+
+        visualizer->run();
+    }
+    catch (const vis::VisException &ex)
+    {
+        VIS_LOG(vis::LogLevel::ERROR, "vis exception: %s", ex.what());
+        error_msg.append(ex.what());
+    }
+    catch (const std::exception &ex)
+    {
+        VIS_LOG(vis::LogLevel::ERROR, "standard exception: %s", ex.what());
+        error_msg.append(ex.what());
+    }
+    catch (...)
+    {
+        VIS_LOG(vis::LogLevel::ERROR, "unknown exception");
+        error_msg.append("unknown exception");
+    }
 
     vis::Logger::uninitialize();
 
-    // Clears the terminal on exit
-    system("setterm -blank 10");
-    system("clear");
+    if (!error_msg.empty())
+    {
+        std::cout << error_msg << std::endl;
+    }
 }

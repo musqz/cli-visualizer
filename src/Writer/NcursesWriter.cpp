@@ -4,70 +4,108 @@
  * Created on: Jul 30, 2015
  *     Author: dpayne
  */
+#include <cmath>
 
-#include "Writer/NcursesWriter.h"
+#include "Domain/VisConstants.h"
 #include "Utils/Logger.h"
 #include "Utils/NcursesUtils.h"
+#include "Writer/NcursesWriter.h"
 
-vis::NcursesWriter::NcursesWriter(const vis::Settings *const settings)
-    : m_settings{settings}
+#ifdef _LINUX
+/* Ncurses version 6.0.20170401 introduced an issue with COLOR_PAIR which broke
+ * setting more than 256 color pairs. Specifically it uses an A_COLOR macro
+ * which uses a 8 bit mask. This will work for colors since only 256 colors are
+ * supported but it breaks color pairs since 2^16 color pairs are supported.
+ */
+#define VIS_A_COLOR (NCURSES_BITS(((1U) << 16) - 1U, 0))
+#define VIS_COLOR_PAIR(n) (NCURSES_BITS((n), 0) & VIS_A_COLOR)
+#else
+#define VIS_COLOR_PAIR(n) (COLOR_PAIR(n))
+#endif
+
+vis::NcursesWriter::NcursesWriter()
 {
     initscr();
+    noecho();    // disable printing of pressed keys
     curs_set(0); // sets the cursor to invisible
-    setlocale(LC_ALL, "");
+    setlocale(LC_ALL, VisConstants::k_default_locale.c_str());
 
-    if (has_colors() == TRUE)
+    if (static_cast<int>(has_colors()) == TRUE)
+    {
+        start_color();        // turns on color
+        use_default_colors(); // uses default colors of terminal, which allows
+                              // transparency to work
+    }
+}
+
+void vis::NcursesWriter::setup_color_pairs(
+    bool is_override_terminal_colors,
+    const std::vector<ColorDefinition> &colors)
+{
+    // initialize colors
+    for (const auto &color : colors)
+    {
+        if (is_override_terminal_colors && color.get_red() >= 0)
+        {
+            init_color(color.get_color_index(), color.get_red(),
+                       color.get_green(), color.get_blue());
+        }
+
+        init_pair(color.get_color_index(), color.get_color_index(), -1);
+
+        // initialize colors as background, this is used in write_background to
+        // create a
+        // full block effect without using a custom font
+        init_pair(
+            static_cast<int16_t>(color.get_color_index() +
+                                 NcursesUtils::number_of_colors_supported()),
+            color.get_color_index(), color.get_color_index());
+    }
+}
+
+void vis::NcursesWriter::setup_colors(
+    bool is_override_terminal_colors,
+    const std::vector<ColorDefinition> &colors)
+{
+    if (static_cast<int>(has_colors()) == TRUE)
     {
         start_color();        // turns on color
         use_default_colors(); // uses default colors of terminal, which allows
                               // transparency to work
 
-        // initialize color pairs
-        setup_colors();
-    }
-}
-
-void vis::NcursesWriter::setup_colors()
-{
-    // initialize colors
-    for (int16_t i = 0; i < COLORS; ++i)
-    {
-        init_pair(i, i, -1);
-
-        // initialize colors as background, this is used in write_background to
-        // create a
-        // full block effect without using a custom font
-        init_pair(static_cast<int16_t>(i + COLORS), i, i);
+        // only supports max 256 colors
+        setup_color_pairs(is_override_terminal_colors, colors);
     }
 }
 
 void vis::NcursesWriter::write_background(int32_t height, int32_t width,
-                                          vis::ColorIndex color,
+                                          vis::ColorDefinition color,
                                           const std::wstring &msg)
 {
     // Add COLORS which will set it to have the color as the background, see
     // "setup_colors"
-    auto color_pair = COLOR_PAIR(color + COLORS);
-    attron(color_pair);
+    attron(VIS_COLOR_PAIR(color.get_color_index() +
+                          NcursesUtils::number_of_colors_supported()));
 
     mvaddwstr(height, width, msg.c_str());
 
-    attroff(color_pair);
+    attroff(VIS_COLOR_PAIR(color.get_color_index() +
+                           NcursesUtils::number_of_colors_supported()));
 }
 
 void vis::NcursesWriter::write_foreground(int32_t height, int32_t width,
-                                          vis::ColorIndex color,
+                                          vis::ColorDefinition color,
                                           const std::wstring &msg)
 {
-    attron(COLOR_PAIR(color));
+    attron(VIS_COLOR_PAIR(color.get_color_index()));
 
     mvaddwstr(height, width, msg.c_str());
 
-    attroff(COLOR_PAIR(color));
+    attroff(VIS_COLOR_PAIR(color.get_color_index()));
 }
 
 void vis::NcursesWriter::write(const int32_t row, const int32_t column,
-                               const vis::ColorIndex color,
+                               const vis::ColorDefinition color,
                                const std::wstring &msg, const wchar_t character)
 {
     // This is a hack to achieve a solid bar look without using a custom font.
@@ -94,47 +132,24 @@ void vis::NcursesWriter::flush()
     refresh();
 }
 
-int16_t vis::NcursesWriter::to_ansi_color_domain(const int16_t color)
+vis::ColorDefinition
+vis::NcursesWriter::to_color_pair(int32_t number, int32_t max,
+                                  std::vector<ColorDefinition> colors,
+                                  bool wrap) const
 {
-    return static_cast<int16_t>(6.0 * static_cast<double>(color) / 256.0);
-}
-
-/**
- * Returns nearest supported 256-color an rgb value as an ansi color value
- * Inspired by the rainbow gem https://github.com/sickill/rainbow
- *
- * This is an approximate result. Actual results depend on what colors the
- * terminal has set.
- */
-int16_t vis::NcursesWriter::to_ansi_color(const int16_t red,
-                                          const int16_t green,
-                                          const int16_t blue)
-{
-    return 16 + static_cast<int16_t>((to_ansi_color_domain(red) * 36.0) +
-                                     (to_ansi_color_domain(green) * 6.0) +
-                                     (to_ansi_color_domain(blue) * 1.0));
-}
-
-vis::ColorIndex vis::NcursesWriter::to_color_pair(int32_t number, int32_t max,
-                                                  bool wrap) const
-{
-    const auto colors_size = static_cast<vis::ColorIndex>(
-        m_settings->get_color_definitions().size());
+    const auto colors_size = static_cast<vis::ColorIndex>(colors.size());
     const auto index = (number * colors_size) / (max + 1);
 
     // no colors
     if (colors_size == 0)
     {
-        return 0;
+        return vis::ColorDefinition{0, 0, 0, 0};
     }
 
-    const auto color_definition =
-        m_settings->get_color_definitions()[static_cast<size_t>(
-            wrap ? index % colors_size : std::min(index, colors_size - 1))];
+    const auto color = colors[static_cast<size_t>(
+        wrap ? index % colors_size : std::min(index, colors_size - 1))];
 
-    return to_ansi_color(color_definition.get_red(),
-                         color_definition.get_green(),
-                         color_definition.get_blue());
+    return color;
 }
 
 vis::NcursesWriter::~NcursesWriter()

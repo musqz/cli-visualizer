@@ -5,17 +5,17 @@
  *     Author: dpayne
  */
 
+#include "Transformer/LorenzTransformer.h"
 #include "Domain/VisConstants.h"
 #include "Utils/Logger.h"
 #include "Utils/NcursesUtils.h"
-#include "Transformer/LorenzTransformer.h"
 #include <algorithm>
 #include <climits>
 #include <cmath>
+#include <cstdio>
 #include <iostream>
-#include <stdio.h>
-#include <thread>
 #include <numeric>
+#include <thread>
 
 /**
  * This visualizer is based on the lorenz equation. The lorenz rotates on the
@@ -33,27 +33,30 @@ namespace
 
 // The actual value of k_max_rotation_count doesn't matter that much. This is
 // just used to reset the rotation count so that the value never overflows.
-static const double k_max_rotation_count = 1000.0;
+const double k_max_rotation_count = 1000.0;
 
-static const size_t k_max_color_index_for_lorenz = 16;
+const size_t k_max_color_index_for_lorenz = 16;
+
+const size_t k_color_distance_limit = 16384;
 
 // These values were taken through experimentation on what seemed to work best.
-static const double k_lorenz_h = 0.01;
-static const double k_lorenz_a = 10.0;
-static const double k_lorenz_b1 = 7.1429;
-static const double k_lorenz_b2 = 0.000908845;
-static const double k_lorenz_c = 8.0 / 3.0;
-}
+const double k_lorenz_h = 0.01;
+const double k_lorenz_a = 10.0;
+const double k_lorenz_b1 = 7.1429;
+const double k_lorenz_b2 = 0.000908845;
+const double k_lorenz_c = 8.0 / 3.0;
+} // namespace
 
-vis::LorenzTransformer::LorenzTransformer(const Settings *const settings)
-    : m_settings{settings}, m_rotation_count_left{0.0},
-      m_rotation_count_right{0.0}
+vis::LorenzTransformer::LorenzTransformer(
+    const std::shared_ptr<const vis::Settings> settings,
+    const std::string &name)
+    : GenericTransformer(name), m_settings{settings},
+      m_rotation_count_left{0.0}, m_rotation_count_right{0.0},
+      m_max_color_index{k_max_color_index_for_lorenz}
 {
 }
 
-vis::LorenzTransformer::~LorenzTransformer()
-{
-}
+vis::LorenzTransformer::~LorenzTransformer() = default;
 
 void vis::LorenzTransformer::execute_mono(pcm_stereo_sample *buffer,
                                           vis::NcursesWriter *writer)
@@ -93,7 +96,11 @@ void vis::LorenzTransformer::execute_stereo(pcm_stereo_sample *buffer,
         (average_left * (m_settings->get_fps() / 65536.0));
     const auto rotation_interval_right =
         (average_right * (m_settings->get_fps() / 65536.0));
-    const auto average = (average_left + average_right) / 2.0;
+
+    const auto overridden_scaling_multiplier =
+        m_settings->get_scaling_multiplier();
+    const auto average =
+        overridden_scaling_multiplier * (average_left + average_right) / 2.0;
 
     // lorenz_b will range from 11.7 to 64.4. Below 10 the lorenz is pretty much
     // just a disc and after 64.4 the size increases dramatically.
@@ -145,8 +152,8 @@ void vis::LorenzTransformer::execute_stereo(pcm_stereo_sample *buffer,
 
     // k_max_color_index_for_lorenz was chosen mostly through experimentation on
     // what seemed to work well.
-    recalculate_colors(k_max_color_index_for_lorenz, m_precomputed_colors,
-                       writer);
+    recalculate_colors(m_max_color_index, m_settings->get_colors(),
+                       &m_precomputed_colors, writer);
 
     std::wstring msg{m_settings->get_lorenz_character()};
     for (auto i = 0u; i < samples; ++i)
@@ -169,6 +176,14 @@ void vis::LorenzTransformer::execute_stereo(pcm_stereo_sample *buffer,
         auto color_distance =
             static_cast<size_t>(std::min(distance_p1, distance_p2));
 
+        if (color_distance > m_max_color_index)
+        {
+            m_max_color_index =
+                std::min(k_color_distance_limit, color_distance);
+            recalculate_colors(m_max_color_index, m_settings->get_colors(),
+                               &m_precomputed_colors, writer);
+        }
+
         // We want to rotate around the center of the lorenz. so we offset zaxis
         // so that the center of the lorenz is at point (0,0,0)
         x = x0;
@@ -186,7 +201,8 @@ void vis::LorenzTransformer::execute_stereo(pcm_stereo_sample *buffer,
 
         // Throw out any points outside the window
         if (y > (half_height * -1) && y < half_height &&
-            x > (win_width / 2 * -1) && x < win_width / 2)
+            x > ((static_cast<double>(win_width) / 2.0) * -1) &&
+            x < (static_cast<double>(win_width) / 2.0))
         {
             // skip the first 100 since values under 100 stick out too much from
             // the reset of the points

@@ -8,9 +8,10 @@
 #ifndef _VIS_COLOR_DEFINITION_H
 #define _VIS_COLOR_DEFINITION_H
 
+#include "Domain/VisTypes.h"
+#include <iostream>
 #include <string>
 #include <vector>
-#include "Domain/VisTypes.h"
 
 namespace vis
 {
@@ -23,11 +24,15 @@ class ColorDefinition
     ColorDefinition(ColorIndex color_index, ColorValue red, ColorValue green,
                     ColorValue blue);
 
-    ColorDefinition(const ColorDefinition &&other) noexcept;
+    ColorDefinition(ColorDefinition &&c) = default;
 
-    ColorDefinition(const ColorDefinition &other) noexcept;
+    ColorDefinition(const ColorDefinition &c) = default;
 
-    virtual ~ColorDefinition();
+    ColorDefinition &operator=(const ColorDefinition &other) = default;
+
+    ColorDefinition &operator=(ColorDefinition &&other) = default;
+
+    ~ColorDefinition() = default;
 
     inline ColorIndex get_color_index() const
     {
@@ -49,24 +54,6 @@ class ColorDefinition
         return m_blue;
     }
 
-    ColorDefinition &operator=(const ColorDefinition other) noexcept
-    {
-        this->m_color_index = other.get_color_index();
-        this->m_red = other.get_red();
-        this->m_green = other.get_green();
-        this->m_blue = other.get_blue();
-        return *this;
-    }
-
-    ColorDefinition &operator=(ColorDefinition &&other) noexcept
-    {
-        this->m_color_index = other.get_color_index();
-        this->m_red = other.get_red();
-        this->m_green = other.get_green();
-        this->m_blue = other.get_blue();
-        return *this;
-    }
-
   private:
     ColorIndex m_color_index;
 
@@ -74,6 +61,32 @@ class ColorDefinition
     ColorValue m_green;
     ColorValue m_blue;
 };
+
+inline bool operator!=(const vis::ColorDefinition &color1,
+                       const vis::ColorDefinition &color2)
+{
+    return color1.get_red() != color2.get_red() ||
+           color1.get_green() != color2.get_green() ||
+           color1.get_blue() != color2.get_blue();
 }
+
+inline bool operator==(const vis::ColorDefinition &color1,
+                       const vis::ColorDefinition &color2)
+{
+    return color1.get_red() == color2.get_red() &&
+           color1.get_green() == color2.get_green() &&
+           color1.get_blue() == color2.get_blue();
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const vis::ColorDefinition &color)
+{
+    return os << std::hex << "{\"color_index\":" << color.get_color_index()
+              << ", \"red\":" << color.get_red()
+              << ", \"green\":" << color.get_green()
+              << ", \"blue\":" << color.get_blue() << "}" << std::dec;
+}
+
+} // namespace vis
 
 #endif

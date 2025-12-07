@@ -18,9 +18,17 @@ namespace vis
 class Settings
 {
   public:
-    explicit Settings();
+    explicit Settings(std::string config_path);
 
-    ~Settings();
+    double get_scaling_multiplier() const noexcept
+    {
+        return m_scaling_multiplier;
+    }
+
+    void set_scaling_multiplier(const double scaling_multiplier)
+    {
+        m_scaling_multiplier = scaling_multiplier;
+    }
 
     uint32_t get_sampling_frequency() const noexcept
     {
@@ -67,7 +75,7 @@ class Settings
         return m_sampling_frequency / m_fps;
     }
 
-    std::string get_mpd_fifo_path() const noexcept
+    const std::string &get_mpd_fifo_path() const noexcept
     {
         return m_mpd_fifo_path;
     }
@@ -77,7 +85,17 @@ class Settings
         m_mpd_fifo_path = path;
     }
 
-    std::vector<std::string> get_visualizers() const noexcept
+    const std::string &get_shmem_name() const noexcept
+    {
+        return m_shmem_name;
+    }
+
+    void set_shmem_name(const std::string &path)
+    {
+        m_shmem_name = path;
+    }
+
+    const std::vector<std::string> &get_visualizers() const noexcept
     {
         return m_visualizers;
     }
@@ -87,14 +105,14 @@ class Settings
         m_visualizers = visualizers;
     }
 
-    std::vector<std::string> get_audio_sources() const noexcept
+    const std::string &get_audio_source() const noexcept
     {
-        return m_audio_sources;
+        return m_audio_source;
     }
 
-    void set_audio_sources(const std::vector<std::string> &audio_sources)
+    void set_audio_source(const std::string &audio_source)
     {
-        m_audio_sources = audio_sources;
+        m_audio_source = audio_source;
     }
 
     void set_is_stereo_enabled(bool is_stereo_enabled)
@@ -107,16 +125,24 @@ class Settings
         return m_is_stereo_enabled;
     }
 
-    const std::vector<vis::ColorDefinition> &get_color_definitions() const
-        noexcept
+    const std::vector<vis::ColorDefinition> &get_colors() const noexcept
     {
-        return m_color_definitions;
+        return m_colors;
     }
 
-    void set_color_definitions(
-        const std::vector<vis::ColorDefinition> &color_definitions)
+    void set_colors(const std::vector<vis::ColorDefinition> &colors)
     {
-        m_color_definitions = color_definitions;
+        m_colors = colors;
+    }
+
+    void set_is_override_terminal_colors(bool is_override_terminal_colors)
+    {
+        m_is_override_terminal_colors = is_override_terminal_colors;
+    }
+
+    bool is_override_terminal_colors() const noexcept
+    {
+        return m_is_override_terminal_colors;
     }
 
     wchar_t get_spectrum_character() const noexcept
@@ -201,7 +227,11 @@ class Settings
 
     uint32_t get_spectrum_bar_spacing() const noexcept
     {
-        return m_spectrum_bar_spacing;
+        if (m_is_spectrum_sideways) {
+            return m_spectrum_bar_spacing / 2;
+        } else  {
+            return m_spectrum_bar_spacing;
+        }
     }
 
     void set_spectrum_bar_spacing(const uint32_t spectrum_bar_spacing)
@@ -239,6 +269,66 @@ class Settings
         return m_spectrum_falloff_weight;
     }
 
+    void set_spectrum_top_margin(const double spectrum_top_margin)
+    {
+        m_spectrum_top_margin = spectrum_top_margin;
+    }
+
+    double get_spectrum_top_margin() const noexcept
+    {
+        return m_spectrum_top_margin;
+    }
+
+    void set_spectrum_bottom_margin(const double spectrum_bottom_margin)
+    {
+        m_spectrum_bottom_margin = spectrum_bottom_margin;
+    }
+
+    double get_spectrum_bottom_margin() const noexcept
+    {
+        return m_spectrum_bottom_margin;
+    }
+
+    void set_spectrum_right_margin(const double spectrum_right_margin)
+    {
+        m_spectrum_right_margin = spectrum_right_margin;
+    }
+
+    double get_spectrum_right_margin() const noexcept
+    {
+        return m_spectrum_right_margin;
+    }
+
+    void set_spectrum_left_margin(const double spectrum_left_margin)
+    {
+        m_spectrum_left_margin = spectrum_left_margin;
+    }
+
+    double get_spectrum_left_margin() const noexcept
+    {
+        return m_spectrum_left_margin;
+    }
+
+    void set_is_spectrum_reversed(const bool is_spectrum_reversed)
+    {
+        m_is_spectrum_reversed = is_spectrum_reversed;
+    }
+
+    bool is_spectrum_reversed() const noexcept
+    {
+        return m_is_spectrum_reversed;
+    }
+
+    void set_is_spectrum_sideways(const bool is_spectrum_sideways)
+    {
+        m_is_spectrum_sideways = is_spectrum_sideways;
+    }
+
+    bool is_spectrum_sideways() const noexcept
+    {
+        return m_is_spectrum_sideways;
+    }
+
     void set_rotation_interval(const int64_t rotation_interval)
     {
         m_rotation_interval = rotation_interval;
@@ -249,17 +339,61 @@ class Settings
         return m_rotation_interval;
     }
 
+    void set_port_audio_source(const std::string &port_audio_source)
+    {
+        m_port_audio_source = port_audio_source;
+    }
+
+    const std::string &get_port_audio_source() const noexcept
+    {
+        return m_port_audio_source;
+    }
+
+    void set_pulse_audio_source(const std::string &pulse_audio_source)
+    {
+        m_pulse_audio_source = pulse_audio_source;
+    }
+
+    const std::string &get_pulse_audio_source() const noexcept
+    {
+        return m_pulse_audio_source;
+    }
+
+    void set_color_schemes(const std::vector<std::string> &color_schemes)
+    {
+        m_color_schemes = color_schemes;
+    }
+
+    const std::vector<std::string> &get_color_schemes() const noexcept
+    {
+        return m_color_schemes;
+    }
+
+    void set_config_path(const std::string &config_path)
+    {
+        m_config_path = config_path;
+    }
+
+    const std::string &get_config_path() const noexcept
+    {
+        return m_config_path;
+    }
+
+    void reset_reloadable_settings();
+
   private:
     std::string m_mpd_fifo_path;
+    std::string m_shmem_name;
+    double m_scaling_multiplier;
     uint32_t m_fps;
     uint32_t m_sampling_frequency;
     uint32_t m_low_cutoff_frequency;
     uint32_t m_high_cutoff_frequency;
     bool m_is_stereo_enabled;
-    std::vector<std::string> m_audio_sources;
+    std::string m_audio_source;
     std::vector<std::string> m_visualizers;
-    std::vector<vis::ColorDefinition> m_color_definitions;
-    std::vector<vis::ColorIndex> m_colors;
+    std::vector<vis::ColorDefinition> m_colors;
+    bool m_is_override_terminal_colors;
     wchar_t m_spectrum_character;
     wchar_t m_lorenz_character;
     wchar_t m_ellipse_character;
@@ -272,8 +406,18 @@ class Settings
     SmoothingMode m_spectrum_smoothing_mode;
     FalloffMode m_spectrum_falloff_mode;
     double m_spectrum_falloff_weight;
+    double m_spectrum_top_margin;
+    double m_spectrum_bottom_margin;
+    double m_spectrum_right_margin;
+    double m_spectrum_left_margin;
+    bool m_is_spectrum_reversed;
+    bool m_is_spectrum_sideways;
     int64_t m_rotation_interval;
+    std::string m_port_audio_source;
+    std::string m_pulse_audio_source;
+    std::vector<std::string> m_color_schemes;
+    std::string m_config_path;
 };
-}
+} // namespace vis
 
 #endif
