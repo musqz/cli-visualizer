@@ -557,7 +557,7 @@ void vis::ConfigurationUtils::validate_setting_is_not_negative(
 {
     if (t < 0.0)
     {
-        throw vis::VisException("Invalid settings %s=%d", setting.c_str(), t);
+        throw vis::VisException("Invalid settings %s=%f", setting.c_str(), t);
     }
 }
 
@@ -566,7 +566,7 @@ void vis::ConfigurationUtils::validate_setting_is_greater_than_zero(
 {
     if (t <= 0.0)
     {
-        throw vis::VisException("Invalid settings %s=%d", setting.c_str(), t);
+        throw vis::VisException("Invalid settings %s=%f", setting.c_str(), t);
     }
 }
 
